@@ -21,8 +21,8 @@ RUN groupadd -g 10001 panel && useradd -u 10001 -g panel -M -s /usr/sbin/nologin
 COPY --from=wheels /wheels /wheels
 RUN pip install --no-cache-dir --no-index --find-links=/wheels reality-control && rm -rf /wheels
 WORKDIR /opt/backend
-COPY backend/alembic.ini ./
-COPY backend/alembic ./alembic
+COPY --chown=10001:10001 backend/alembic.ini ./
+COPY --chown=10001:10001 backend/alembic ./alembic
 COPY --from=frontend /build/dist /opt/static
 USER 10001:10001
 CMD ["uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8000", "--no-access-log", "--no-proxy-headers"]
