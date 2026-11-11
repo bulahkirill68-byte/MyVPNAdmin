@@ -1,0 +1,25 @@
+[Unit]
+Description=Reality Control local Xray setup agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+ExecStart=/usr/bin/python3 /opt/reality-agent/agent.py
+Restart=on-failure
+RestartSec=3
+RuntimeDirectory=reality-agent
+RuntimeDirectoryMode=0750
+StateDirectory=reality-agent
+StateDirectoryMode=0700
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=read-only
+ReadWritePaths=-/root
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target

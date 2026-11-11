@@ -9,7 +9,8 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install -e './backend[test]'
-      - run: ruff check backend scripts
+      - run: ruff check backend scripts host
+      - run: bash -n host/install_xray_reality.sh scripts/install_agent.sh scripts/install.sh scripts/update.sh
       - run: pytest -q
         working-directory: backend
       - uses: actions/setup-node@v4

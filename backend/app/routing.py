@@ -1,6 +1,12 @@
 import ipaddress
 from app.schemas import Routing
 
+# Explicit fallbacks for Russian services using international TLDs/CDNs; GeoSite remains authoritative.
+RU_DOMAINS = ["ru", "su", "xn--p1ai", "ya.ru", "yandex.com", "yandex.net", "yastatic.net",
+              "vk.com", "vk.me", "vkuser.net", "userapi.com", "mycdn.me", "mail.ru", "ok.ru",
+              "gosuslugi.ru", "sberbank.ru", "sber.ru", "tbank.ru", "tinkoff.ru", "ozon.ru",
+              "ozonusercontent.com", "wildberries.ru", "wb.ru", "wbbasket.ru"]
+
 
 def export(policy: Routing) -> dict:
     rules = []
@@ -12,12 +18,40 @@ def export(policy: Routing) -> dict:
             {"type": "field", "ip": ["geoip:private"], "outboundTag": "direct"},
             {"type": "field", "domain": ["full:localhost", "domain:lan", "domain:local", "domain:home.arpa"],
              "outboundTag": "direct"},
-            {"type": "field", "domain": ["geosite:category-ru", "domain:ru", "domain:su", "domain:xn--p1ai"],
+            {"type": "field", "domain": ["geosite:category-ru", *[f"domain:{d}" for d in RU_DOMAINS]],
              "outboundTag": "direct"},
             {"type": "field", "ip": ["geoip:ru"], "outboundTag": "direct"},
         ]
     rules.append({"type": "field", "network": "tcp,udp", "outboundTag": "proxy"})
-    return {"domainStrategy": "IPIfNonMatch", "rules": rules}
+    # IPIfNonMatch + an unconditional final rule never reaches a DNS retry for unknown domains.
+    # IPOnDemand resolves when evaluating GeoIP, including non-.ru domains hosted on Russian IPs.
+    return {"domainStrategy": "IPOnDemand", "rules": rules}
+
+
+def client_config(user, server: dict, policy: Routing) -> dict:
+    policy = policy.model_copy(update={"preset": user.policy})
+    return {
+        "remarks": user.name,
+        "log": {"loglevel": "warning"},
+        "dns": {"servers": ["https+local://1.1.1.1/dns-query"], "queryStrategy": "UseIP"},
+        "inbounds": [
+            {"tag": "socks", "listen": "127.0.0.1", "port": 10808, "protocol": "socks",
+             "settings": {"auth": "noauth", "udp": True},
+             "sniffing": {"enabled": True, "destOverride": ["http", "tls", "quic"], "routeOnly": True}},
+            {"tag": "http", "listen": "127.0.0.1", "port": 10809, "protocol": "http", "settings": {}},
+        ],
+        "outbounds": [
+            {"tag": "proxy", "protocol": "vless", "settings": {"vnext": [
+                {"address": server["ip"], "port": server["port"], "users": [
+                    {"id": user.uuid, "encryption": "none", "flow": "xtls-rprx-vision"}]}]},
+             "streamSettings": {"network": "raw", "security": "reality", "realitySettings": {
+                 "serverName": server["sni"], "fingerprint": "chrome", "publicKey": server["public_key"],
+                 "shortId": server["short_id"], "spiderX": "/"}}},
+            {"tag": "direct", "protocol": "freedom", "settings": {"domainStrategy": "UseIP"}},
+            {"tag": "block", "protocol": "blackhole", "settings": {}},
+        ],
+        "routing": export(policy),
+    }
 
 
 def test_route(policy: Routing, target: str) -> dict:

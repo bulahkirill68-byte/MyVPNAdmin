@@ -40,6 +40,7 @@ import QRCode from 'qrcode'
 import TrafficChart from './components/TrafficChart.vue'
 import Modal from './components/Modal.vue'
 import RuleValues from './components/RuleValues.vue'
+import SetupPanel from './components/SetupPanel.vue'
 import {
   api,
   setCsrf,
@@ -287,6 +288,10 @@ async function exportUserRouting() {
   await run(async () => {
     download('v2rayNG-user-routing.json', await api(`/users/${access.value!.id}/routing/export`))
   })
+}
+async function exportClientConfig() {
+  if (!access.value) return
+  await run(async () => download('reality-client-config.json', await api(`/users/${access.value!.id}/client-config`)))
 }
 const confirmation = ref<{ ids: number[]; action: string; title: string } | null>(null)
 function confirmAction(ids: number[], action: string) {
@@ -1021,7 +1026,7 @@ function ratio(user: User) {
                 вручную в указанном порядке.
               </li>
               <li>
-                Проверьте теги proxy/direct/block, обновите geoip.dat и geosite.dat. Включите IPIfNonMatch и
+                Проверьте теги proxy/direct/block, обновите geoip.dat и geosite.dat. Включите IPOnDemand и
                 sniffing при необходимости.
               </li>
               <li>
@@ -1056,6 +1061,7 @@ function ratio(user: User) {
         >
 
         <template v-if="page === 'settings'">
+          <SetupPanel :server-ip="settings?.server?.ip" @imported="run(load)" />
           <div class="page-heading">
             <div>
               <span class="eyebrow">ОСНОВА ВАШЕЙ СЕТИ</span>
@@ -1136,7 +1142,7 @@ bash scripts/backup.sh</pre>
           </section>
         </template>
         <footer class="page-footer">
-          <span>reality control <span class="version">v0.1</span></span
+          <span>reality control <span class="version">v0.2</span></span
           ><span>Локальная панель · Ваш сервер, ваши данные</span>
         </footer>
       </main>
@@ -1290,6 +1296,8 @@ bash scripts/backup.sh</pre>
     <button class="text-btn" @click="exportUserRouting">
       <Download :size="15" /> Экспорт назначенного профиля маршрутизации
     </button>
+    <button class="primary full" @click="exportClientConfig"><Download :size="17" /> Клиентский JSON с маршрутизацией</button>
+    <p class="info-note">Профиль по умолчанию: Россия напрямую. Импортируйте полный JSON как custom configuration в совместимый клиент. Обычный QR/VLESS ниже содержит только узел. Android Per-app proxy настраивается отдельно.</p>
     <div class="access-head">
       <span class="success-circle"><Check :size="24" /></span>
       <h3>{{ access.name }}</h3>

@@ -18,7 +18,7 @@ Web и worker — один собранный образ, отдельные п�
 
 ## Компромисс host network
 
-На Linux контейнер с host network видит хостовый loopback Xray без открывания API в интернет. Web жёстко слушает 127.0.0.1:8000. Worker слушателей не создаёт. Это уменьшает сетевую изоляцию: процесс может соединяться с другими локальными сервисами. Компенсация — non-root UID 10001, отсутствие capabilities, read-only rootfs, no-new-privileges, никаких Docker socket/config.json/root mount. Для более строгой изоляции в следующем этапе можно заменить доступ на минимальный Unix-socket host agent.
+На Linux контейнер с host network видит хостовый loopback Xray без открывания API в интернет. Web жёстко слушает 127.0.0.1:8000. Worker слушателей не создаёт. Это уменьшает сетевую изоляцию: процесс может соединяться с другими локальными сервисами. Компенсация — non-root UID 10001, отсутствие capabilities, read-only rootfs, no-new-privileges, никаких Docker socket/config.json/root mount. В 0.2 для установки и первоначальной подготовки добавлен отдельный root systemd host-agent с peer-checked Unix-сокетом; обычный CRUD/трафик по-прежнему используют прямой локальный gRPC.
 
 ## gRPC контракт
 

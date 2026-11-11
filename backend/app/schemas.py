@@ -86,3 +86,26 @@ class Routing(Strict):
     rules: list[RouteRule] = Field(default_factory=list, max_length=100)
     user_rules: list[RouteRule] = Field(default_factory=list, max_length=100)
     local_rules: list[RouteRule] = Field(default_factory=list, max_length=100)
+
+
+class Setup(Strict):
+    ip: str = Field(min_length=7, max_length=15)
+    sni: str = Field(default="www.wikipedia.org", min_length=3, max_length=253)
+    confirm: bool = False
+
+    @field_validator("ip")
+    @classmethod
+    def public_ip(cls, value):
+        address = ipaddress.IPv4Address(value)
+        if not address.is_global:
+            raise ValueError("Нужен публичный IPv4")
+        return str(address)
+
+    @field_validator("sni")
+    @classmethod
+    def target(cls, value):
+        value = value.rstrip(".").encode("idna").decode("ascii")
+        if "." not in value or any(not re.fullmatch(
+            r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?", label) for label in value.split(".")):
+            raise ValueError("Некорректный SNI")
+        return value

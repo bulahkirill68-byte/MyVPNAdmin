@@ -15,10 +15,10 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from app.auth import authenticated, digest, login
 from app.db import DATA, Audit, Sample, Server, Session, Setting, User, WebSession, audit, now
 from app.domain import link, renewal, status
-from app.routing import export, test_route
-from app.schemas import Action, Credentials, Routing, UserInput
+from app.routing import client_config, export, test_route
+from app.schemas import Action, Credentials, Routing, Setup, UserInput
 
-app = FastAPI(title="Reality Control", version="0.1.0", docs_url=None, redoc_url=None, openapi_url=None)
+app = FastAPI(title="Reality Control", version="0.2.0", docs_url=None, redoc_url=None, openapi_url=None)
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1", "testserver"])
 
 
@@ -292,6 +292,61 @@ def routing_test(target: str, actor=Depends(authenticated)):
         return test_route(Routing.model_validate(routing(actor)), target)
     except (ValueError, UnicodeError):
         raise HTTPException(422, "Некорректный адрес") from None
+
+
+@app.get("/api/users/{user_id}/client-config")
+def user_client_config(user_id: int, actor=Depends(authenticated)):
+    policy = Routing.model_validate(routing(actor))
+    with Session.begin() as db:
+        user = get_user(db, user_id)
+        server = db.get(Server, 1)
+        if not server:
+            raise HTTPException(409, "Сервер не импортирован")
+        audit(db, actor, "client_config_exported", user.id)
+        return client_config(user, server.metadata_json, policy)
+
+
+def agent_call(method, path, data=None):
+    from app.host_agent import request
+    try:
+        return request(method, path, data)
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from None
+    except (OSError, TimeoutError):
+        raise HTTPException(503, "Хостовый агент недоступен. Выполните sudo bash scripts/install_agent.sh") from None
+
+
+@app.get("/api/setup")
+def setup_status(actor=Depends(authenticated)):
+    from app.host_agent import request
+    with Session() as db:
+        imported = db.get(Server, 1) is not None
+    try:
+        return {"available": True, "imported": imported, **request("GET", "/status")}
+    except (OSError, ValueError, TimeoutError):
+        return {"available": False, "imported": imported,
+                "reason": "Установите локальный host-agent: sudo bash scripts/install_agent.sh"}
+
+
+@app.post("/api/setup/{operation}", status_code=202)
+def setup_operation(operation: str, data: Setup, actor=Depends(authenticated)):
+    if operation not in ("install", "prepare", "import"):
+        raise HTTPException(404, "Неизвестная операция")
+    if not data.confirm:
+        raise HTTPException(409, "Подтвердите операцию")
+    if operation == "import":
+        from app.cli import import_data
+        payload = agent_call("GET", f"/onboarding?ip={data.ip}")
+        try:
+            import_data(payload)
+        except ValueError:
+            raise HTTPException(409, "Сервер уже импортирован или метаданные некорректны") from None
+        result = {"state": "succeeded", "message": "Сервер и пользователи импортированы без смены UUID"}
+    else:
+        result = agent_call("POST", f"/{operation}", data.model_dump())
+    with Session.begin() as db:
+        audit(db, actor, f"setup_{operation}")
+    return result
 
 
 static = Path(os.environ.get("STATIC_DIR", "/opt/static"))

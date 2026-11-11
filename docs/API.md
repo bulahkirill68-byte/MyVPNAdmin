@@ -18,6 +18,11 @@
 | GET | `/traffic?user_id=1` | Почасовой трафик за 7 дней, user_id необязателен |
 | GET | `/audit?user_id=1` | Последние 200 событий |
 | GET | `/settings` | Публичные метаданные и имена backup |
+| GET | `/setup` | Состояние root host-agent, задачи и импорта |
+| POST | `/setup/install` | Свежая установка на хосте, `{ip,sni,confirm:true}` |
+| POST | `/setup/prepare` | Подготовка существующего Xray с backup/test/restart/rollback |
+| POST | `/setup/import` | Импорт разрешённых метаданных от агента |
+| GET | `/users/{id}/client-config` | Полный секретный клиентский JSON с назначенным routing |
 | POST | `/backup` | Snapshot SQLite |
 | GET/PUT | `/routing` | Редактор профиля |
 | GET | `/routing/export` | Xray routing JSON для клиентского импорта |

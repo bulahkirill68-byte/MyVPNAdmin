@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { readFile } from 'node:fs/promises'
 
 test('real API: login, user wizard, QR, pause, renewal, routing, backup, mobile', async ({ page }) => {
   const browserErrors: string[] = []
@@ -24,6 +25,12 @@ test('real API: login, user wizard, QR, pause, renewal, routing, backup, mobile'
   await page.getByRole('button', { name: 'Показать QR и ссылку' }).click()
   await expect(page.getByRole('img', { name: 'QR-код подключения VLESS' })).toBeVisible()
   await expect(page.getByLabel('VLESS-ссылка', { exact: true })).toHaveValue(/^vless:\/\//)
+  const downloadEvent = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Клиентский JSON с маршрутизацией' }).click()
+  const configDownload = await downloadEvent
+  const config = JSON.parse(await readFile((await configDownload.path())!, 'utf8'))
+  expect(config.routing.domainStrategy).toBe('IPOnDemand')
+  expect(config.outbounds.map((o: { tag: string }) => o.tag)).toEqual(['proxy', 'direct', 'block'])
   await page.getByRole('button', { name: 'Готово', exact: true }).click()
   await page
     .getByRole('navigation')
@@ -62,4 +69,32 @@ test('real API: login, user wizard, QR, pause, renewal, routing, backup, mobile'
     .click()
   await expect(page.getByRole('heading', { name: 'Пользователи.' })).toBeVisible()
   expect(browserErrors).toEqual([])
+})
+
+test('setup wizard: fresh install job and import UI with isolated host-agent responses', async ({ page }) => {
+  let installed = false, imported = false
+  await page.route('**/api/setup', route => route.fulfill({ json: {
+    available: true, imported, installed, config_exists: installed,
+    job: { state: installed ? 'succeeded' : 'idle', message: installed ? 'Xray готов к импорту в панель' : '' }
+  } }))
+  await page.route('**/api/setup/install', async route => {
+    expect(route.request().postDataJSON()).toMatchObject({ ip: '8.8.8.8', sni: 'www.wikipedia.org', confirm: true })
+    installed = true
+    await route.fulfill({ status: 202, json: { state: 'running', id: 'isolated-ui-job' } })
+  })
+  await page.route('**/api/setup/import', async route => {
+    imported = true
+    await route.fulfill({ status: 202, json: { state: 'succeeded', message: 'Сервер импортирован' } })
+  })
+  await page.goto('/')
+  await page.getByLabel('Имя администратора').fill('e2e-owner')
+  await page.getByLabel('Пароль', { exact: true }).fill('e2e-only-long-password')
+  await page.getByRole('button', { name: 'Войти в панель' }).click()
+  await page.getByRole('button', { name: 'Настройки', exact: true }).click()
+  await page.getByLabel('Публичный IPv4 VPS').fill('8.8.8.8')
+  await page.getByRole('checkbox', { name: /Разрешаю установить Xray/ }).check()
+  await page.getByRole('button', { name: 'Установить Xray + REALITY', exact: true }).click()
+  await expect(page.getByText('Xray готов к импорту в панель', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Импортировать в панель', exact: true }).click()
+  await expect(page.getByText('Сервер подключён к панели.', { exact: false })).toBeVisible()
 })

@@ -6,7 +6,7 @@
 2. Установите Docker Engine и Compose plugin для Ubuntu: <https://docs.docker.com/engine/install/ubuntu/>. Нужен Linux host network.
 3. Склонируйте репозиторий, выполните `sudo bash scripts/install.sh`.
 4. Создайте администратора `docker compose exec web python -m app.cli admin`.
-5. Выполните read-only импорт по README. Установщик пользователя уже создаёт нужный email/stats/API. Скрипт экспортирует только метаданные и UUID, передаёт JSON через stdin. Не сохраняйте этот JSON в Git.
+5. В настройках панели установите Xray на чистом VPS или подготовьте существующий, затем импортируйте его. Для уже полностью настроенного конфига остаётся read-only CLI-импорт по README. Конфиг без email/stats/API подготавливается с backup/test/rollback и одним restart. Не сохраняйте экспорт с UUID в Git.
 
 Если конфиг содержит JSONC, комментарии или trailing commas, stdlib JSON экспорт отклонит его. Подготовьте локальную валидную JSON-копию и укажите `--config` вместо редактирования работающего файла. Если нет стабильных email/StatsService, требуется отдельная ручная настройка хоста с backup и тестом; автоматической небезопасной миграции нет.
 

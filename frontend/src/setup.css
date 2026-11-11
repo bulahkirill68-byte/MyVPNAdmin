@@ -1,0 +1,9 @@
+.setup-panel { margin-bottom: 25px; }
+.setup-panel h3 { display:flex; align-items:center; gap:9px; }
+.setup-body { padding:0 23px 23px; }
+.setup-body>.subtle-note { margin-top:0; margin-bottom:20px; }
+.setup-fields { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+.setup-confirm { display:flex; flex-direction:row; align-items:flex-start; line-height:1.8; color:var(--muted); }
+.setup-confirm input { flex-shrink:0; margin-top:4px; }
+.setup-body code { display:block; margin:12px 0; overflow-wrap:anywhere; }
+@media(max-width:760px) { .setup-fields { grid-template-columns:1fr; } .setup-body { padding:0 18px 20px; } .setup-body .inline-actions { flex-direction:column; } }

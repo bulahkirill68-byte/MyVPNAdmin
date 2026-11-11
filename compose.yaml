@@ -33,6 +33,9 @@ services:
   web:
     <<: *common
     network_mode: host
+    volumes:
+      - ./data:/data
+      - /run/reality-agent:/run/reality-agent:ro
     command: [uvicorn, app.main:app, --host, 127.0.0.1, --port, "8000", --no-access-log, --no-proxy-headers]
     restart: unless-stopped
     depends_on:
