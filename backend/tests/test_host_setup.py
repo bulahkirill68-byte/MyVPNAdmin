@@ -56,6 +56,8 @@ def test_prepare_validates_before_replacing_and_rolls_back(agent, monkeypatch, t
 
     def run(args, timeout=30):
         calls.append(args)
+        if "-test" in args:
+            assert args[-1].endswith(".json")  # Xray infers the loader from the filename extension.
         if args[:2] == ["systemctl", "is-active"]:
             raise subprocess.CalledProcessError(1, args)
         return ""

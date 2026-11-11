@@ -136,7 +136,7 @@ def prepare_existing():
     backup.write_bytes(original)
     backup.chmod(0o600)
     info = CONFIG.stat()
-    fd, filename = tempfile.mkstemp(prefix=".panel-", dir=CONFIG.parent)
+    fd, filename = tempfile.mkstemp(prefix=".panel-", suffix=".json", dir=CONFIG.parent)
     candidate = Path(filename)
     try:
         with os.fdopen(fd, "w") as stream:
