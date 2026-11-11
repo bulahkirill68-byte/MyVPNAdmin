@@ -45,7 +45,7 @@ def client_config(user, server: dict, policy: Routing) -> dict:
                 {"address": server["ip"], "port": server["port"], "users": [
                     {"id": user.uuid, "encryption": "none", "flow": "xtls-rprx-vision"}]}]},
              "streamSettings": {"network": "raw", "security": "reality", "realitySettings": {
-                 "serverName": server["sni"], "fingerprint": "chrome", "publicKey": server["public_key"],
+                 "serverName": server["sni"], "fingerprint": "firefox", "publicKey": server["public_key"],
                  "shortId": server["short_id"], "spiderX": "/"}}},
             {"tag": "direct", "protocol": "freedom", "settings": {"domainStrategy": "UseIP"}},
             {"tag": "block", "protocol": "blackhole", "settings": {}},

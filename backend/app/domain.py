@@ -26,7 +26,7 @@ def counter_delta(previous: int, current: int, restarted: bool = False) -> int:
 
 def link(user: User, server: dict) -> str:
     query = urlencode(dict(encryption="none", security="reality", type="tcp", flow="xtls-rprx-vision",
-                           sni=server["sni"], fp="chrome", pbk=server["public_key"], sid=server["short_id"]))
+                           sni=server["sni"], fp="firefox", pbk=server["public_key"], sid=server["short_id"]))
     return f"vless://{user.uuid}@{server['ip']}:{server['port']}?{query}#{quote(user.name)}"
 
 
