@@ -12,6 +12,7 @@ Restart=on-failure
 RestartSec=3
 RuntimeDirectory=reality-agent
 RuntimeDirectoryMode=0750
+RuntimeDirectoryPreserve=yes
 StateDirectory=reality-agent
 StateDirectoryMode=0700
 UMask=0077
