@@ -1,0 +1,16 @@
+// Wire-compatible subset of XTLS/Xray-core protobufs. See docs/ARCHITECTURE.md.
+syntax = "proto3";
+package panel.wire;
+message TypedMessage { string type = 1; bytes value = 2; }
+message Account { string id = 1; string flow = 2; string encryption = 3; }
+message User { uint32 level = 1; string email = 2; TypedMessage account = 3; }
+message AddUserOperation { User user = 1; }
+message RemoveUserOperation { string email = 1; }
+message AlterInboundRequest { string tag = 1; TypedMessage operation = 2; }
+message Empty {}
+message GetInboundUserRequest { string tag = 1; string email = 2; }
+message GetInboundUserResponse { repeated User users = 1; }
+message QueryStatsRequest { string pattern = 1; bool reset = 2; }
+message Stat { string name = 1; int64 value = 2; }
+message QueryStatsResponse { repeated Stat stat = 1; }
+message SysStatsResponse { uint32 Uptime = 10; }

@@ -1,0 +1,61 @@
+name: reality-control
+x-common: &common
+  image: reality-control:local
+  build:
+    context: .
+    dockerfile: backend/Dockerfile
+  user: "10001:10001"
+  env_file: .env
+  environment:
+    DATA_DIR: /data
+    TZ: UTC
+  volumes:
+    - ./data:/data
+  read_only: true
+  tmpfs:
+    - /tmp:size=64m,mode=1777
+  cap_drop: [ALL]
+  security_opt:
+    - no-new-privileges:true
+  logging:
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: "3"
+
+services:
+  migrate:
+    <<: *common
+    network_mode: none
+    command: [alembic, upgrade, head]
+    restart: "no"
+
+  web:
+    <<: *common
+    network_mode: host
+    command: [uvicorn, app.main:app, --host, 127.0.0.1, --port, "8000", --no-access-log, --no-proxy-headers]
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  worker:
+    <<: *common
+    network_mode: host
+    command: [python, -m, app.worker]
+    restart: unless-stopped
+    depends_on:
+      web:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, python, -c, "from app.db import Session,Setting,now; db=Session(); s=db.get(Setting,'worker'); assert s and now()-s.value['at']<120"]
+      interval: 30s
+      timeout: 5s
+      retries: 4
+      start_period: 60s

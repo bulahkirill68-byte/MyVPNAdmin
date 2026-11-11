@@ -1,0 +1,9 @@
+# Optional local development: use the same security defaults; frontend is served by Vite on the host.
+services:
+  web:
+    command: [uvicorn, app.main:app, --host, 127.0.0.1, --port, "8000", --reload, --no-access-log, --no-proxy-headers]
+    volumes:
+      - ./backend/app:/opt/backend/app:ro
+  worker:
+    volumes:
+      - ./backend/app:/opt/backend/app:ro
