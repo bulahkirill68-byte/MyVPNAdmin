@@ -1,0 +1,9 @@
+[Unit]
+Description=Renew Reality Control IP certificate and refresh HTTPS
+Wants=network-online.target
+After=network-online.target nginx.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/reality-public/https_control.py renew
+UMask=0077

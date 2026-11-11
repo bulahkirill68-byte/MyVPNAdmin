@@ -1,0 +1,7 @@
+[Unit]
+Description=Close public Reality HTTPS when certificate is invalid or expiring
+After=nginx.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/reality-public/https_control.py refresh

@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-test = ["pytest>=8,<10", "httpx>=0.28,<1", "ruff>=0.11,<1", "grpcio-tools>=1.70,<2"]
+test = ["pytest>=8,<10", "httpx>=0.28,<1", "ruff>=0.11,<1", "grpcio-tools>=1.70,<2", "cryptography>=44,<49"]
 
 [tool.setuptools.packages.find]
 include = ["app*"]

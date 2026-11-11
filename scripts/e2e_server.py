@@ -25,7 +25,7 @@ def main():
                             "short_id": "abcd", "tag": "vless-reality"},
                  "users": [{"name": "Импортированный тест", "uuid": "f59127f8-f242-443d-86b6-a87841be4ceb",
                             "email": "e2e@local.invalid"}]})
-    uvicorn.run("app.main:app", host="127.0.0.1", port=8000, access_log=False)
+    uvicorn.run("app.main:app", host="127.0.0.1", port=int(os.environ.get("E2E_PORT", "18000")), access_log=False)
 
 
 if __name__ == "__main__":

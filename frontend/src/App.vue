@@ -56,6 +56,7 @@ import {
   type Rule,
 } from './api'
 import { t } from './i18n'
+const directHttps = window.location.protocol === 'https:'
 
 const pages = [
   { id: 'dashboard', name: 'Обзор', icon: LayoutDashboard },
@@ -460,7 +461,7 @@ function ratio(user: User) {
       <div class="login-orbit"><ShieldCheck :size="74" /></div>
       <h1>Ваш сервер.<br />Полный контроль.</h1>
       <p>Управляйте доступом, следите за трафиком<br />и держите инфраструктуру под контролем.</p>
-      <span class="secure-tag"><ShieldCheck :size="15" /> Приватная панель · SSH tunnel</span>
+      <span class="secure-tag"><ShieldCheck :size="15" /> {{ directHttps ? 'Защищённая панель · HTTPS' : 'Приватная панель · SSH tunnel' }}</span>
     </div>
     <form class="login-card" @submit.prevent="signIn">
       <span class="eyebrow">ДОБРО ПОЖАЛОВАТЬ</span>
@@ -489,7 +490,7 @@ function ratio(user: User) {
         ><ArrowUpRight :size="18" />
       </button>
       <p class="login-help">
-        <ShieldCheck :size="15" /> Доступ только через localhost.<br />Первый администратор создаётся командой
+        <ShieldCheck :size="15" /> {{ directHttps ? 'Защищённое HTTPS-подключение.' : 'Доступ только через localhost.' }}<br />Первый администратор создаётся командой
         CLI.
       </p>
     </form>
@@ -551,7 +552,7 @@ function ratio(user: User) {
           }}</strong>
         </div>
         <div class="top-actions">
-          <span class="tunnel"><ShieldCheck :size="14" /> SSH · защищено</span
+          <span class="tunnel"><ShieldCheck :size="14" /> {{ directHttps ? 'HTTPS · защищено' : 'SSH · защищено' }}</span
           ><button
             class="icon-btn"
             :aria-label="theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'"
@@ -1143,7 +1144,7 @@ bash scripts/backup.sh</pre>
         </template>
         <footer class="page-footer">
           <span>reality control <span class="version">v0.2</span></span
-          ><span>Локальная панель · Ваш сервер, ваши данные</span>
+          ><span>{{ directHttps ? 'HTTPS-панель' : 'Локальная панель' }} · Ваш сервер, ваши данные</span>
         </footer>
       </main>
     </div>

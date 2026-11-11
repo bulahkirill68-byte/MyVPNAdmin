@@ -36,7 +36,7 @@ services:
     volumes:
       - ./data:/data
       - /run/reality-agent:/run/reality-agent:ro
-    command: [uvicorn, app.main:app, --host, 127.0.0.1, --port, "8000", --no-access-log, --no-proxy-headers]
+    command: [uvicorn, app.main:app, --host, 127.0.0.1, --port, "8000", --no-access-log, --proxy-headers, --forwarded-allow-ips, 127.0.0.1]
     restart: unless-stopped
     depends_on:
       migrate:

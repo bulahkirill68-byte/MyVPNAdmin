@@ -4,6 +4,7 @@ from pathlib import Path
 import secrets
 import socket
 from uuid import uuid4
+from urllib.parse import urlsplit
 
 import psutil
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
@@ -19,7 +20,13 @@ from app.routing import client_config, export, test_route
 from app.schemas import Action, Credentials, Routing, Setup, UserInput
 
 app = FastAPI(title="Reality Control", version="0.2.0", docs_url=None, redoc_url=None, openapi_url=None)
-app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1", "testserver"])
+public_origin = os.environ.get("PUBLIC_ORIGIN", "").rstrip("/")
+public_url = urlsplit(public_origin)
+if public_origin and (public_url.scheme != "https" or not public_url.hostname or public_url.path
+                      or public_url.query or public_url.fragment or public_url.username):
+    raise RuntimeError("PUBLIC_ORIGIN должен иметь вид https://IP:PORT без пути")
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1", "testserver"]
+                   + ([public_url.hostname] if public_origin else []))
 
 
 @app.middleware("http")

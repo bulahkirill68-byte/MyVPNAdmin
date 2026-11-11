@@ -25,4 +25,4 @@ COPY --chown=10001:10001 backend/alembic.ini ./
 COPY --chown=10001:10001 backend/alembic ./alembic
 COPY --from=frontend /build/dist /opt/static
 USER 10001:10001
-CMD ["uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8000", "--no-access-log", "--no-proxy-headers"]
+CMD ["uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8000", "--no-access-log", "--proxy-headers", "--forwarded-allow-ips", "127.0.0.1"]
