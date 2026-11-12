@@ -1,6 +1,7 @@
 // Centralized vocabulary; add an English dictionary and locale switch here later.
 export const ru: Record<string, string> = {
   setup_install: 'Запущена установка Xray',
+  setup_initialize: 'Запущено завершение настройки VLESS + REALITY',
   setup_prepare: 'Запущена подготовка Xray',
   setup_import: 'Сервер подключён через агент',
   client_config_exported: 'Выдан клиентский JSON с маршрутизацией',

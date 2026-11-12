@@ -29,16 +29,9 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
 apt-get install -y -qq curl ca-certificates openssl python3 iproute2 unzip >/dev/null
 TMP=$(mktemp -d)
-CONFIG=/usr/local/etc/xray/config.json
-TOUCHED=0
 cleanup() {
   code=$?
   trap - EXIT
-  if (( code != 0 && TOUCHED )); then
-    systemctl stop xray || true
-    # Only the file created by this invocation can be removed; no replace mode exists.
-    rm -f -- "$CONFIG"
-  fi
   rm -rf -- "$TMP"
   exit "$code"
 }
@@ -51,33 +44,6 @@ bash -n "$TMP/install.sh"
 # A dedicated non-login user ensures predictable config permissions even if the official default changes.
 id xray >/dev/null 2>&1 || useradd --system --no-create-home --shell /usr/sbin/nologin xray
 bash "$TMP/install.sh" install
-xray uuid > "$TMP/uuid"
-xray x25519 > "$TMP/keys"
-openssl rand -hex 8 > "$TMP/sid"
-python3 - "$TMP" "$IP" "$TARGET" <<'PY'
-import json,pathlib,re,sys
-p=pathlib.Path(sys.argv[1]); uid=(p/'uuid').read_text().strip(); keys=(p/'keys').read_text()
-private=re.search(r'PrivateKey:\s*(\S+)',keys).group(1)
-public=re.search(r'(?:Password|PublicKey|Public key):\s*(\S+)',keys).group(1)
-sid=(p/'sid').read_text().strip(); target=sys.argv[3]
-config={'log':{'loglevel':'warning'},'api':{'tag':'api','listen':'127.0.0.1:10085','services':['HandlerService','StatsService']},
- 'stats':{},'policy':{'levels':{'0':{'statsUserUplink':True,'statsUserDownlink':True}}},
- 'inbounds':[{'tag':'vless-reality','listen':'0.0.0.0','port':443,'protocol':'vless',
- 'settings':{'clients':[{'id':uid,'email':'first-user@local.invalid','level':0,'flow':'xtls-rprx-vision'}],'decryption':'none'},
- 'streamSettings':{'network':'raw','security':'reality','realitySettings':{'show':False,'target':target+':443',
- 'xver':0,'serverNames':[target],'privateKey':private,'shortIds':[sid]}}}], 'outbounds':[{'tag':'direct','protocol':'freedom'}]}
-(p/'config.json').write_text(json.dumps(config,indent=2))
-(p/'access.txt').write_text(f'Server IPv4: {sys.argv[2]}\nUUID: {uid}\nPublic Key: {public}\nShort ID: {sid}\nSNI: {target}\n')
-PY
-xray run -test -config "$TMP/config.json"
-# The official installer may have created an empty config. Never use this script on an existing Xray.
-install -o root -g xray -m 640 "$TMP/config.json" "$CONFIG"
-TOUCHED=1
-install -o root -g root -m 600 "$TMP/access.txt" "/root/xray-reality-access-$(date -u +%Y%m%dT%H%M%SZ).txt"
-systemctl enable xray
-systemctl restart xray
-sleep 2
-systemctl is-active --quiet xray
-ss -ltnH '( sport = :443 )' | grep -q .
-TOUCHED=0
-echo 'Xray установлен; приватные данные сохранены только в root-файлах.'
+# The official installer creates {}. The same guarded initializer also resumes interrupted installs.
+# Python X25519 generation avoids version-dependent parsing of `xray x25519` output labels.
+python3 "$(dirname "$0")/agent.py" initialize --ip "$IP" --sni "$TARGET"

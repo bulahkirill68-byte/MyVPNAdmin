@@ -344,7 +344,7 @@ def setup_status(actor=Depends(authenticated)):
 
 @app.post("/api/setup/{operation}", status_code=202)
 def setup_operation(operation: str, data: Setup, actor=Depends(authenticated)):
-    if operation not in ("install", "prepare", "import"):
+    if operation not in ("install", "prepare", "initialize", "import"):
         raise HTTPException(404, "Неизвестная операция")
     if not data.confirm:
         raise HTTPException(409, "Подтвердите операцию")

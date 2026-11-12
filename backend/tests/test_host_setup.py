@@ -3,6 +3,7 @@ import importlib.util
 import json
 from pathlib import Path
 import subprocess
+from types import SimpleNamespace
 
 import pytest
 from app.db import Server, Session
@@ -104,7 +105,105 @@ def test_authenticated_setup_bridge_and_import(monkeypatch):
                   headers={"X-CSRF-Token": "bad"}).status_code == 403
     assert c.post("/api/setup/prepare", json={"ip": "8.8.8.8", "confirm": True}).status_code == 202
     assert calls[-1][0:2] == ("POST", "/prepare")
+    assert c.post("/api/setup/initialize", json={"ip": "8.8.8.8", "confirm": True}).status_code == 202
+    assert calls[-1][0:2] == ("POST", "/initialize")
     assert c.post("/api/setup/import", json={"ip": "8.8.8.8", "confirm": True}).status_code == 202
     with Session() as db:
         assert db.get(Server, 1).metadata_json["ip"] == "8.8.8.8"
     assert c.post("/api/setup/import", json={"ip": "8.8.8.8", "confirm": True}).status_code == 409
+
+
+@pytest.mark.parametrize('contents,expected,recoverable', [
+    (None, 'missing', True), ('{}', 'empty', True), (' \n', 'empty', True), ('null', 'other', False),
+    ('{"inbounds":[]}', 'other', False), ('not-json', 'invalid', False),
+])
+def test_empty_install_is_distinguished_from_unknown_configuration(agent, monkeypatch, tmp_path,
+                                                                  contents, expected, recoverable):
+    config = tmp_path / 'config.json'
+    if contents is not None:
+        config.write_text(contents)
+    monkeypatch.setattr(agent, 'CONFIG', config)
+    monkeypatch.setattr(agent.shutil, 'which', lambda _: '/usr/local/bin/xray')
+    monkeypatch.setattr(agent, 'service_is_canonical', lambda: True)
+    result = agent.configuration_state()
+    assert result['configuration'] == expected
+    assert result['can_initialize'] is recoverable
+    assert not result['has_managed_inbound']
+
+
+def test_unknown_systemd_config_is_not_initialized(agent, monkeypatch, tmp_path):
+    config = tmp_path / 'config.json'
+    config.write_text('{}')
+    monkeypatch.setattr(agent, 'CONFIG', config)
+    monkeypatch.setattr(agent.shutil, 'which', lambda _: '/usr/local/bin/xray')
+    monkeypatch.setattr(agent, 'service_is_canonical', lambda: False)
+    assert not agent.configuration_state()['can_initialize']
+    with pytest.raises(ValueError, match='штатной службы'):
+        agent.initialize_empty('8.8.8.8', 'example.com')
+    assert config.read_text() == '{}'
+
+
+def test_canonical_service_requires_exact_single_config(agent, monkeypatch):
+    outputs = iter([
+        '{ path=/usr/local/bin/xray ; argv[]=/usr/local/bin/xray run -config /usr/local/etc/xray/config.json ; ignore_errors=no ; }',
+        '{ path=/usr/local/bin/xray ; argv[]=/usr/local/bin/xray run -confdir /etc/xray ; ignore_errors=no ; }',
+        '{ path=/usr/local/bin/xray ; argv[]=/usr/local/bin/xray run -config /usr/local/etc/xray/config.json -config /other.json ; }',
+    ])
+    monkeypatch.setattr(agent.subprocess, 'run', lambda *args, **kwargs: SimpleNamespace(stdout=next(outputs)))
+    assert agent.service_is_canonical()
+    assert not agent.service_is_canonical()
+    assert not agent.service_is_canonical()
+
+
+def test_initialize_empty_creates_valid_crypto_and_never_rotates_existing_users(agent, monkeypatch, tmp_path):
+    config = tmp_path / 'config.json'
+    config.write_text('{}')
+    monkeypatch.setattr(agent, 'CONFIG', config)
+    monkeypatch.setattr(agent, 'BACKUPS', tmp_path / 'backups')
+    monkeypatch.setattr(agent, 'ACCESS_DIRECTORY', tmp_path)
+    monkeypatch.setattr(agent.shutil, 'which', lambda _: '/usr/local/bin/xray')
+    monkeypatch.setattr(agent, 'service_is_canonical', lambda: True)
+    monkeypatch.setattr(agent, 'service_group', lambda: 123)
+    monkeypatch.setattr(agent, 'service_active', lambda: False)
+    monkeypatch.setattr(agent, 'ensure_ports_free', lambda: None)
+    monkeypatch.setattr(agent.os, 'chown', lambda *args: None, raising=False)
+    calls = []
+    def run(args, timeout=30):
+        calls.append(args)
+        if args[0] == 'openssl':
+            return 'Verify return code: 0 (ok)\nALPN protocol: h2\n'
+        return ''
+    monkeypatch.setattr(agent, 'run', run)
+    class Connected:
+        def __enter__(self): return self
+        def __exit__(self, *args): pass
+    monkeypatch.setattr(agent.socket, 'create_connection', lambda *args, **kwargs: Connected())
+    agent.initialize_empty('8.8.8.8', 'example.com')
+    initialized = json.loads(config.read_text())
+    inbound = initialized['inbounds'][0]
+    assert inbound['tag'] == 'vless-reality' and inbound['port'] == 443
+    assert initialized['api']['listen'] == '127.0.0.1:10085'
+    assert agent.prepared_config(initialized) == initialized
+    reality = inbound['streamSettings']['realitySettings']
+    public = agent.public_key(reality['privateKey'])
+    access = next(tmp_path.glob('xray-reality-access-*.txt')).read_text()
+    assert public in access and 'fp=firefox' in access
+    assert reality['privateKey'] not in access
+    assert any('-test' in c for c in calls)
+    assert agent.configuration_state()['has_managed_inbound']
+    assert not agent.configuration_state()['can_initialize']
+    saved = config.read_bytes()
+    with pytest.raises(ValueError):
+        agent.initialize_empty('8.8.8.8', 'example.com')
+    assert config.read_bytes() == saved
+
+
+def test_initialization_opens_only_vpn_port_in_active_ufw(agent, monkeypatch):
+    monkeypatch.setattr(agent.shutil, 'which', lambda name: '/usr/sbin/ufw')
+    calls = []
+    def run(args, timeout=30):
+        calls.append(args)
+        return 'Status: active' if args == ['ufw', 'status'] else ''
+    monkeypatch.setattr(agent, 'run', run)
+    agent.allow_vpn_port()
+    assert calls == [['ufw', 'status'], ['ufw', 'allow', '443/tcp', 'comment', 'Reality Xray']]

@@ -21,6 +21,7 @@
 | GET | `/setup` | Состояние root host-agent, задачи и импорта |
 | POST | `/setup/install` | Свежая установка на хосте, `{ip,sni,confirm:true}` |
 | POST | `/setup/prepare` | Подготовка существующего Xray с backup/test/restart/rollback |
+| POST | `/setup/initialize` | Завершение только пустой установки штатной службы; непустые конфиги не заменяются |
 | POST | `/setup/import` | Импорт разрешённых метаданных от агента |
 | GET | `/users/{id}/client-config` | Полный секретный клиентский JSON с назначенным routing |
 | POST | `/backup` | Snapshot SQLite |

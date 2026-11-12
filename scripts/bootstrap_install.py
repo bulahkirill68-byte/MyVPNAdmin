@@ -221,10 +221,11 @@ def main():
         xray_config = Path('/usr/local/etc/xray/config.json')
         if args.with_xray and not xray_config.exists() and not shutil.which('xray'):
             run(['bash', '/opt/reality-agent/install_xray_reality.sh', '--yes', '--ip', ip, '--target', args.sni])
-            if shutil.which('ufw'):
-                status = run(['ufw', 'status'], capture=True)
-                if 'Status: active' in status:
-                    run(['ufw', 'allow', '443/tcp', 'comment', 'Reality Xray'])
+        elif args.with_xray and shutil.which('xray'):
+            host = json.loads(run(['python3', '/opt/reality-agent/agent.py', 'status'], capture=True))
+            if host['can_initialize']:
+                print('Завершаем прежнюю установку: конфиг пустой, существующих учётных данных нет.', flush=True)
+                run(['python3', '/opt/reality-agent/agent.py', 'initialize', '--ip', ip, '--sni', args.sni])
         state = json.loads(run([*compose, 'exec', '-T', 'web', 'python', '-m', 'app.cli', 'bootstrap-state'],
                               cwd=INSTALL, capture=True))
         if xray_config.exists() and not state['imported']:

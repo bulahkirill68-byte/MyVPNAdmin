@@ -76,6 +76,7 @@ test('setup wizard: fresh install job and import UI with isolated host-agent res
   await page.route('**/api/settings', route => route.fulfill({ json: { server: null, backups: [] } }))
   await page.route('**/api/setup', route => route.fulfill({ json: {
     available: true, imported, installed, config_exists: installed, public_ip: '8.8.8.8',
+    has_managed_inbound: installed, can_initialize: false,
     job: { state: installed ? 'succeeded' : 'idle', message: installed ? 'Xray готов к импорту в панель' : '' }
   } }))
   await page.route('**/api/setup/install', async route => {
@@ -96,6 +97,36 @@ test('setup wizard: fresh install job and import UI with isolated host-agent res
   await page.getByRole('checkbox', { name: /Разрешаю установить Xray/ }).check()
   await page.getByRole('button', { name: 'Установить Xray + REALITY', exact: true }).click()
   await expect(page.getByText('Xray готов к импорту в панель', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Импортировать в панель', exact: true }).click()
+  await expect(page.getByText('Сервер подключён к панели.', { exact: false })).toBeVisible()
+})
+
+test('setup wizard resumes empty Xray install instead of preparing a missing inbound', async ({ page }) => {
+  let configured = false, imported = false
+  await page.route('**/api/settings', route => route.fulfill({ json: { server: null, backups: [] } }))
+  await page.route('**/api/setup', route => route.fulfill({ json: {
+    available: true, imported, installed: true, config_exists: true, public_ip: '8.8.8.8',
+    has_managed_inbound: configured, can_initialize: !configured,
+    configuration: configured ? 'managed' : 'empty',
+    job: { state: configured ? 'succeeded' : 'idle' },
+  } }))
+  await page.route('**/api/setup/initialize', async route => {
+    expect(route.request().postDataJSON()).toMatchObject({ ip: '8.8.8.8', confirm: true })
+    configured = true
+    await route.fulfill({ status: 202, json: { state: 'running' } })
+  })
+  await page.route('**/api/setup/import', async route => {
+    imported = true
+    await route.fulfill({ status: 202, json: { state: 'succeeded' } })
+  })
+  await page.goto('/')
+  await page.getByLabel('Имя администратора').fill('e2e-owner')
+  await page.getByLabel('Пароль', { exact: true }).fill('e2e-only-long-password')
+  await page.getByRole('button', { name: 'Войти в панель' }).click()
+  await page.getByRole('button', { name: 'Настройки', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Импортировать в панель', exact: true })).toHaveCount(0)
+  await page.getByRole('checkbox', { name: /Разрешаю создать VLESS/ }).check()
+  await page.getByRole('button', { name: 'Завершить настройку VLESS + REALITY', exact: true }).click()
   await page.getByRole('button', { name: 'Импортировать в панель', exact: true }).click()
   await expect(page.getByText('Сервер подключён к панели.', { exact: false })).toBeVisible()
 })
