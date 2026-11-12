@@ -11,6 +11,15 @@ jobs:
       - run: pip install -e './backend[test]'
       - run: ruff check backend scripts host public
       - run: bash -n host/install_xray_reality.sh scripts/install_agent.sh scripts/install.sh scripts/update.sh scripts/enable_https.sh
+      - name: Verify single-file installer matches source
+        run: |
+          python scripts/build_installer.py --check
+          bash -n install-reality-control.sh
+          bash install-reality-control.sh --extract-only "$RUNNER_TEMP/reality-bundle"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: single-file-installer
+          path: install-reality-control.sh
       - run: pytest -q
         working-directory: backend
       - uses: actions/setup-node@v4

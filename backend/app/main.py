@@ -328,10 +328,17 @@ def setup_status(actor=Depends(authenticated)):
     from app.host_agent import request
     with Session() as db:
         imported = db.get(Server, 1) is not None
+    public_ip = os.environ.get("PANEL_PUBLIC_IP", "")
+    if public_ip:
+        from app.schemas import Setup
+        try:
+            public_ip = Setup(ip=public_ip).ip
+        except ValueError:
+            public_ip = ""
     try:
-        return {"available": True, "imported": imported, **request("GET", "/status")}
+        return {"available": True, "imported": imported, "public_ip": public_ip, **request("GET", "/status")}
     except (OSError, ValueError, TimeoutError):
-        return {"available": False, "imported": imported,
+        return {"available": False, "imported": imported, "public_ip": public_ip,
                 "reason": "Установите локальный host-agent: sudo bash scripts/install_agent.sh"}
 
 

@@ -6,13 +6,14 @@ import { api } from '../api'
 const props = defineProps<{ serverIp?: string }>()
 const emit = defineEmits<{ imported: [] }>()
 interface State {
-  available: boolean; imported: boolean; installed?: boolean; config_exists?: boolean; reason?: string
+  available: boolean; imported: boolean; installed?: boolean; config_exists?: boolean; reason?: string; public_ip?: string
   job?: { state: string; message?: string; operation?: string }
 }
 const state = ref<State>(), ip = ref(props.serverIp || ''), sni = ref('www.wikipedia.org')
 const confirmed = ref(false), busy = ref(false), error = ref(''), message = ref('')
+let ipInitialized = Boolean(props.serverIp)
 let timer: ReturnType<typeof setInterval>
-async function refresh() { try { state.value = await api<State>('/setup') } catch (e) { error.value = (e as Error).message } }
+async function refresh() { try { state.value = await api<State>('/setup'); if (!ipInitialized && state.value.public_ip) { if (!ip.value) ip.value = state.value.public_ip; ipInitialized = true } } catch (e) { error.value = (e as Error).message } }
 onMounted(() => { refresh(); timer = setInterval(refresh, 5000) })
 onBeforeUnmount(() => clearInterval(timer))
 async function operate(operation: 'install' | 'prepare' | 'import') {

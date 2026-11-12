@@ -2,6 +2,18 @@
 
 Русскоязычная панель управления **существующим Xray VLESS + REALITY + XTLS Vision** на одном VPS. Vue 3 + TypeScript, FastAPI, SQLAlchemy, Alembic, SQLite WAL. Xray остаётся в systemd на хосте, порт 443 и серверные ключи сохраняются.
 
+## Установка одним файлом
+
+Скачайте **[install-reality-control.sh](install-reality-control.sh)** из этого репозитория, скопируйте на Ubuntu VPS и запустите:
+
+```bash
+sudo bash install-reality-control.sh
+# Или сразу с новым ядром на чистом сервере:
+sudo bash install-reality-control.sh --with-xray
+```
+
+Внутри скрипта — весь код панели, а не ссылка на `git clone`. Он автоматически определяет IPv4 нового VPS, подставляет его в мастер Xray, создаёт администратора и HTTPS-панель на 8443. Генерация доступа использует **fp=firefox**. Зависимости устанавливаются из Интернета; секреты и база действующего сервера в пакет не включаются. [Параметры, повторная установка и проверки](docs/SINGLE_FILE_INSTALL_RU.md).
+
 ## Быстрый запуск на Ubuntu 22.04 / 24.04 / 26.04
 
 Нужны работающий Xray, Docker Engine с Compose plugin, Git и Python 3 на хосте. Установить Docker: <https://docs.docker.com/engine/install/ubuntu/>.

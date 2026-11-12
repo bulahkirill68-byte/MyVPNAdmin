@@ -8,6 +8,7 @@ import shutil
 import sqlite3
 import sys
 import time
+import secrets
 
 from sqlalchemy import select
 
@@ -49,12 +50,32 @@ def import_data(payload: dict):
         audit(db, "cli", "onboarding", detail=f"Импортировано пользователей: {len(data.users)}")
 
 
+def bootstrap_admin(name="admin"):
+    if not 1 <= len(name) <= 80 or not name.strip():
+        raise ValueError("Некорректное имя администратора")
+    with Session.begin() as db:
+        existing = db.scalar(select(Admin).order_by(Admin.id))
+        if existing:
+            return {"created": False, "username": existing.name}
+        password = secrets.token_urlsafe(24)
+        db.add(Admin(name=name, password=hasher.hash(password)))
+        audit(db, "installer", "admin_created")
+        return {"created": True, "username": name, "password": password}
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", choices=["admin", "import", "backup", "restore", "subscription", "smoke"])
+    parser.add_argument("command", choices=["admin", "import", "backup", "restore", "subscription", "smoke",
+                                            "bootstrap-admin", "bootstrap-state"])
     parser.add_argument("argument", nargs="?")
     args = parser.parse_args()
-    if args.command == "admin":
+    if args.command == "bootstrap-admin":
+        print(json.dumps(bootstrap_admin(args.argument or "admin")))
+    elif args.command == "bootstrap-state":
+        with Session() as db:
+            print(json.dumps({"admin_exists": db.scalar(select(Admin)) is not None,
+                              "imported": db.get(Server, 1) is not None}))
+    elif args.command == "admin":
         name = input("Имя администратора: ").strip()
         password = getpass.getpass("Пароль (минимум 14 символов): ")
         if not 1 <= len(name) <= 80 or not 14 <= len(password) <= 256:

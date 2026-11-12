@@ -8,3 +8,4 @@ data
 frontend/dist
 **/*.egg-info
 artifacts
+install-reality-control.sh

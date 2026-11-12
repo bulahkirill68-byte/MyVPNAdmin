@@ -73,8 +73,9 @@ test('real API: login, user wizard, QR, pause, renewal, routing, backup, mobile'
 
 test('setup wizard: fresh install job and import UI with isolated host-agent responses', async ({ page }) => {
   let installed = false, imported = false
+  await page.route('**/api/settings', route => route.fulfill({ json: { server: null, backups: [] } }))
   await page.route('**/api/setup', route => route.fulfill({ json: {
-    available: true, imported, installed, config_exists: installed,
+    available: true, imported, installed, config_exists: installed, public_ip: '8.8.8.8',
     job: { state: installed ? 'succeeded' : 'idle', message: installed ? 'Xray готов к импорту в панель' : '' }
   } }))
   await page.route('**/api/setup/install', async route => {
@@ -91,7 +92,7 @@ test('setup wizard: fresh install job and import UI with isolated host-agent res
   await page.getByLabel('Пароль', { exact: true }).fill('e2e-only-long-password')
   await page.getByRole('button', { name: 'Войти в панель' }).click()
   await page.getByRole('button', { name: 'Настройки', exact: true }).click()
-  await page.getByLabel('Публичный IPv4 VPS').fill('8.8.8.8')
+  await expect(page.getByLabel('Публичный IPv4 VPS')).toHaveValue('8.8.8.8')
   await page.getByRole('checkbox', { name: /Разрешаю установить Xray/ }).check()
   await page.getByRole('button', { name: 'Установить Xray + REALITY', exact: true }).click()
   await expect(page.getByText('Xray готов к импорту в панель', { exact: true })).toBeVisible()
