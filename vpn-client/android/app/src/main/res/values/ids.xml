@@ -1,0 +1,1 @@
+<resources><item name="vpn_connect" type="id"/><item name="vpn_navigation" type="id"/><item name="traffic_received" type="id"/><item name="traffic_sent" type="id"/><item name="traffic_status" type="id"/><item name="app_icon" type="id"/><item name="add_vpn_tile" type="id"/></resources>

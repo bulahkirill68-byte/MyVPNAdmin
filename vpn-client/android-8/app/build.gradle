@@ -1,0 +1,59 @@
+plugins { id 'com.android.application' }
+def signing = new Properties()
+def signingFile = rootProject.file('signing.properties')
+if (!signingFile.exists()) signingFile = rootProject.file('../android/signing.properties')
+if (signingFile.exists()) signingFile.withInputStream { signing.load(it) }
+
+android {
+    namespace 'com.realitycontrol.vpn'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'com.realitycontrol.vpn'
+        minSdk 26
+        targetSdk 26
+        versionCode 5
+        versionName '1.0.3-android8'
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+    buildFeatures { buildConfig true }
+    testOptions { unitTests.includeAndroidResources = true }
+    // Keep current protocol/routing fixes shared; manifest, SDK target, tests and
+    // release outputs are owned by this independent Android 8 project.
+    sourceSets {
+        main {
+            java.srcDirs = ['../../android/app/src/main/java']
+            res.srcDirs = ['../../android/app/src/main/res']
+            assets.srcDirs = ['../../android/app/src/main/assets']
+        }
+        test {
+            java.srcDirs = ['src/test/java', '../../android/app/src/test/java']
+            java.exclude '**/LayoutTest.java', '**/AndroidControlsTest.java'
+        }
+    }
+    splits {
+        abi {
+            enable true
+            reset()
+            include 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+            universalApk true
+        }
+    }
+    signingConfigs {
+        if (signingFile.exists()) android8Release {
+            storeFile new File(signingFile.parentFile, signing.getProperty('storeFile'))
+            storePassword signing.getProperty('storePassword')
+            keyAlias signing.getProperty('keyAlias')
+            keyPassword signing.getProperty('keyPassword')
+        }
+    }
+    buildTypes { release { minifyEnabled false; if (signingFile.exists()) signingConfig signingConfigs.android8Release } }
+    packaging { jniLibs { useLegacyPackaging = false } }
+    // This is an intentional API-26 compatibility build for direct installation.
+    lint { disable 'ExpiredTargetSdkVersion', 'OldTargetApi' }
+}
+dependencies {
+    implementation files('../../android/app/libs/libv2ray.aar')
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20250107'
+    testImplementation 'org.robolectric:robolectric:4.16.1'
+}

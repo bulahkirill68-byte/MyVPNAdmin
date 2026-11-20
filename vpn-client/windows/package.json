@@ -1,0 +1,76 @@
+{
+  "name": "reality-vpn-client",
+  "version": "1.0.3",
+  "description": "Reality VPN — Windows VLESS REALITY client",
+  "author": "Reality Control",
+  "private": true,
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5174",
+    "build:ui": "vue-tsc --noEmit && vite build",
+    "start": "electron .",
+    "test": "node --test tests/*.test.cjs",
+    "test:smoke": "node tests/smoke.cjs",
+    "dist": "npm run build:ui && electron-builder --win nsis --x64 && python ../scripts/build_portable.py"
+  },
+  "dependencies": {
+    "https-proxy-agent": "^7.0.6",
+    "@grpc/grpc-js": "^1.13.0"
+  },
+  "devDependencies": {
+    "vue": "^3.5.13",
+    "lucide-vue-next": "^0.468.0",
+    "@vitejs/plugin-vue": "^5.2.1",
+    "vite": "^6.4.6",
+    "typescript": "~5.7.3",
+    "vue-tsc": "^3.3.14",
+    "electron": "^45.3.1",
+    "electron-builder": "^26.0.12",
+    "playwright": "^1.58.2"
+  },
+  "build": {
+    "electronLanguages": [
+      "ru",
+      "en-US"
+    ],
+    "appId": "com.realitycontrol.vpn",
+    "productName": "Reality VPN",
+    "directories": {
+      "output": "../releases/windows"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "shared/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "assets/engine",
+        "to": "engine"
+      },
+      {
+        "from": "assets/native",
+        "to": "native"
+      }
+    ],
+    "win": {
+      "icon": "assets/icon.ico",
+      "target": [
+        "portable",
+        "nsis"
+      ],
+      "signAndEditExecutable": false
+    },
+    "portable": {
+      "artifactName": "RealityVPN-${version}-portable.exe"
+    },
+    "nsis": {
+      "artifactName": "RealityVPN-${version}-setup.exe",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
+      "createDesktopShortcut": true
+    }
+  }
+}

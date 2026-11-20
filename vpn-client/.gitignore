@@ -1,0 +1,16 @@
+**/node_modules/
+**/dist/
+**/release/
+**/build/
+**/.gradle/
+**/local.properties
+windows/assets/engine/
+windows/assets/native/
+android/app/libs/
+android/app/src/main/assets/geoip.dat
+android/app/src/main/assets/geosite.dat
+releases/
+*.jks
+*.keystore
+signing.properties
+*.log
